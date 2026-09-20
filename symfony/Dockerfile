@@ -68,6 +68,9 @@ COPY --link docker/frankenphp/conf.d/app.dev.ini $PHP_INI_DIR/conf.d/
 
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile", "--watch" ]
 
+FROM vue:latest AS vue_prod
+FROM docs:latest AS docs_prod
+
 # Prod FrankenPHP image
 FROM frankenphp_base AS frankenphp_prod
 
@@ -97,7 +100,8 @@ RUN if [ "$APP_ENV" = "dev" ]; then \
 
 # copy sources
 COPY --link . ./
-# The frontend and docs assets are mounted at runtime from their own services.
+COPY --from=vue_prod --link /app/dist /var/www/vue
+COPY --from=docs_prod --link /app/.vitepress/dist /var/www/docs
 # RUN rm -Rf docker/frankenphp/
 # RUN rm -Rf frankenphp/
 
