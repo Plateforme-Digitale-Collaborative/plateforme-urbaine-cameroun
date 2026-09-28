@@ -22,3 +22,4 @@ services:
       - ./symfony/docker/caddy/worker.Caddyfile:/etc/caddy/worker.Caddyfile
       - './symfony/public/media:/app/public/media'
       - './symfony/public/files:/app/public/files'
+      - './symfony/config/jwt:/app/config/jwt'
