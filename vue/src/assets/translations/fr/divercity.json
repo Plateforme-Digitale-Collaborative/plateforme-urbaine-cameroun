@@ -57,6 +57,7 @@
         "repeatUsersRate": "Taux de récurrence",
         "averageLeadTimeHours": "Délai moyen de réservation",
         "spaceAdminsCount": "Administrateurs de l'espace",
+        "empty": "Aucun indicateur de performance disponible pour le moment.",
         "groups": {
           "bookings": "Réservations",
           "rates": "Taux & occupation",
