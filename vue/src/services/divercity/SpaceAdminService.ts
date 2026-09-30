@@ -18,11 +18,9 @@ export class SpaceAdminService {
         headers: { accept: 'application/ld+json' }
       })
     ).data
-    const match = (data['hydra:member'] as SpaceAdminItem[]).find(
-      (item) => item.user === userIri && item.space === spaceIri
-    )
-    if (match) {
-      await apiClient.delete(match['@id'])
-    }
+
+    const members: SpaceAdminItem[] = data['hydra:member'] ?? data['member'] ?? []
+
+    await Promise.all(members.map((item) => apiClient.delete(item['@id'])))
   }
 }

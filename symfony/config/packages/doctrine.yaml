@@ -7,6 +7,10 @@ doctrine:
         server_version: '16'
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
+
+        mapping_types:
+            hstore: string
+        schema_filter: '~^(?!geodata\.planet_osm_)~'
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

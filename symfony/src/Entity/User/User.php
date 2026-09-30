@@ -72,6 +72,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: CurrentUserProvider::class,
             normalizationContext: ['groups' => self::GROUP_GETME]
         ),
+        new Get( // ← nouveau, pour que /api/users/{id} soit un IRI valide
+            security: 'is_granted("ROLE_ADMIN") or object == user',
+        ),
         new GetCollection(
             // provider: UserProvider::class // To use if we need to open to every logged user if we need to see user names associated to likes
             security: 'is_granted("ROLE_ADMIN")',

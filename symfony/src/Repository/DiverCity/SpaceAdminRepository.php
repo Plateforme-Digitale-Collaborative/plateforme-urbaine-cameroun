@@ -23,7 +23,7 @@ class SpaceAdminRepository extends ServiceEntityRepository
      */
     public function isAdminOf(User $user, Space $space): bool
     {
-        return null !== $this->find(['user' => $user, 'space' => $space]);
+        return null !== $this->findOneBy(['user' => $user, 'space' => $space]);
     }
 
     /**
