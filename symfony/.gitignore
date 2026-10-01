@@ -11,6 +11,8 @@
 /public/qgis/
 /var/
 /vendor/
+/logs/
+/backups/
 ###< symfony/framework-bundle ###
 
 ###> lexik/jwt-authentication-bundle ###
