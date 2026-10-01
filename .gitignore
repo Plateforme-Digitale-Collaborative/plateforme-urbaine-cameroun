@@ -4,6 +4,9 @@ docker/postgres/*
 docker/qgis/data/*
 docker/osm2pgsql/*
 
+/logs/
+/backups/
+
 .idea
 local.mk
 
