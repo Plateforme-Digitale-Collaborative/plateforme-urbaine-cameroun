@@ -1,0 +1,59 @@
+name: Déploiement production PDC
+
+# Déclenchement manuel uniquement : bouton "Run workflow" dans l'onglet
+# Actions de GitHub. Aucun déploiement automatique sur push.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branche à déployer"
+        required: true
+        default: "geosm"
+      run_osm_import:
+        description: "Relancer aussi l'import OSM (rare, plusieurs minutes)"
+        type: boolean
+        required: false
+        default: false
+      force:
+        description: "Déployer même sans nouveau commit (ex: changement de .env.local)"
+        type: boolean
+        required: false
+        default: false
+
+# Un seul déploiement à la fois ; on ne coupe jamais un déploiement en cours.
+concurrency:
+  group: deploy-prod-pdc
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Se connecter au serveur et lancer le déploiement
+        # Conseil : épingler l'action sur un SHA de commit plutôt qu'un tag.
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          # Passés en variables d'environnement (et non interpolés dans le
+          # script) pour éviter toute injection via le nom de branche.
+          DEPLOY_BRANCH: ${{ inputs.branch }}
+          DEPLOY_OSM: ${{ inputs.run_osm_import }}
+          DEPLOY_FORCE: ${{ inputs.force }}
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          command_timeout: 45m
+          script_stop: true
+          envs: DEPLOY_BRANCH,DEPLOY_OSM,DEPLOY_FORCE
+          script: |
+            cd /srv/puc_prod
+            ARGS=""
+            if [ "$DEPLOY_OSM" = "true" ]; then ARGS="$ARGS --run-osm-import"; fi
+            if [ "$DEPLOY_FORCE" = "true" ]; then ARGS="$ARGS --force"; fi
+            # shellcheck disable=SC2086
+            bash scripts/deploy.sh "$DEPLOY_BRANCH" $ARGS
