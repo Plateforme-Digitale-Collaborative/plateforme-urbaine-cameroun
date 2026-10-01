@@ -10,7 +10,7 @@ doctrine:
 
         mapping_types:
             hstore: string
-        schema_filter: '~^(?!geodata\.planet_osm_)~'
+        schema_filter: '~^(?!geodata\.(planet_osm_|osm2pgsql_))~'
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
