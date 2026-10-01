@@ -6,17 +6,14 @@ include vue/Makefile
 -include .env
 -include .env.local
 
-ifdef ENV
-env := $(ENV)
-else
-env := prod
-endif
+ENV ?= prod
+EXEC_FLAGS ?=
 
-DOCKER_COMP = docker compose --env-file .env --env-file .env.${ENV} --env-file .env.local
+DOCKER_COMP = docker compose --env-file .env --env-file .env.$(ENV) --env-file .env.local
 
-DOCKER_EXEC_VUE = $(DOCKER_COMP) exec vue
-DOCKER_EXEC_PHP = $(DOCKER_COMP) exec frankenphp
-DOCKER_EXEC_POSTGRES = $(DOCKER_COMP) exec postgres
+DOCKER_EXEC_VUE = $(DOCKER_COMP) exec $(EXEC_FLAGS) vue
+DOCKER_EXEC_PHP = $(DOCKER_COMP) exec $(EXEC_FLAGS) frankenphp
+DOCKER_EXEC_POSTGRES = $(DOCKER_COMP) exec $(EXEC_FLAGS) postgres
 
 VUE = $(DOCKER_EXEC_VUE)
 SYMFONY = $(DOCKER_EXEC_PHP) php bin/console

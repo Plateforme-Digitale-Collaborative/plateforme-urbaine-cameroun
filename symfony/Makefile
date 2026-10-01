@@ -10,7 +10,10 @@ sf:			## List all Symfony commands or pass the parameter "c=" to run a given com
 cc:			## Clear the cache
 	@$(SYMFONY) c:c
 
-init-jwt-keypair:	## Generate a new JWT keypair
+init-jwt-keypair:	## Generate the JWT keypair only if it does not exist yet
+	@$(SYMFONY) lexik:jwt:generate-keypair --skip-if-exists
+
+regenerate-jwt-keypair:	## Force a new keypair (logs everyone out)
 	@$(SYMFONY) lexik:jwt:generate-keypair --overwrite
 
 ##
