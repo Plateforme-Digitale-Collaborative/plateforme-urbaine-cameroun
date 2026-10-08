@@ -35,10 +35,17 @@
         <v-list lines="one" bg-color="light-yellow">
           <v-list-item
             v-for="(tab, index) in NavigationTabsService.getContent()"
-            @click="showMobileMenu = !showMobileMenu"
             :key="index"
+            :disabled="tab.disabled"
+            @click="showMobileMenu = !showMobileMenu"
           >
-            <RouterLink :to="tab.route" class="Header__tabsText">
+            <RouterLink
+              :to="tab.route"
+              class="Header__tabsText"
+              :class="{ 'Header__tabsText--disabled': tab.disabled }"
+              :tabindex="tab.disabled ? -1 : undefined"
+              :aria-disabled="tab.disabled ? 'true' : undefined"
+            >
               <span
                 :class="{ 'Header__tabsText--active': appStore.activeTab === tab.value }"
                 @click="appStore.activeTab = tab.value"
@@ -98,6 +105,12 @@ const whatsappLink = `https://wa.me/${'+237652266618'.replace(/\D/g, '')}`
 
       &--active {
         color: rgb(var(--v-theme-main-red));
+      }
+
+      &--disabled {
+        color: rgb(var(--v-theme-main-grey));
+        cursor: not-allowed;
+        pointer-events: none;
       }
     }
 
