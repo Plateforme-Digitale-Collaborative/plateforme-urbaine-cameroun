@@ -1,20 +1,11 @@
 <template>
-  <div class="MyMapAtlasSummary" :type="type">
-    <div class="d-flex flex-row flex-wrap">
+  <div class="MyMapAtlasSummary" :type="type" @click="setActiveAtlas">
+    <div class="MyMapAtlasSummary_content">
       <div class="MyMapAtlasSummary_logo" :type="type">
         <img loading="lazy" :src="atlas.logo.contentUrl" v-if="atlas.logo" />
       </div>
       <div class="MyMapAtlasSummary_desc">
-        <v-tooltip :text="atlas.name" location="top" v-if="atlas.name.length > 19">
-          <template v-slot:activator="{ props }">
-            <div class="MyMapAtlasSummary_title" v-bind="props">
-              {{ reduceText(atlas.name, 19) }}
-            </div>
-          </template>
-        </v-tooltip>
-        <div class="MyMapAtlasSummary_title" v-else>
-          {{ atlas.name }}
-        </div>
+        <TruncatedText class="MyMapAtlasSummary_title" :text="atlas.name" />
         <div class="MyMapAtlasSummary_details">
           {{ filteredLength }}
           {{
@@ -25,13 +16,18 @@
         </div>
       </div>
     </div>
-    <v-btn size="small" icon="$arrowRight" class="text-dark-grey" @click="setActiveAtlas"></v-btn>
+    <v-btn
+      size="small"
+      icon="$arrowRight"
+      class="MyMapAtlasSummary_btn text-dark-grey"
+      @click.stop="setActiveAtlas"
+    ></v-btn>
   </div>
 </template>
 <script setup lang="ts">
 import { AtlasGroup } from '@/models/enums/geo/AtlasGroup'
 import type { Atlas } from '@/models/interfaces/Atlas'
-import { reduceText } from '@/services/utils/UtilsService'
+import TruncatedText from '@/components/common/TruncatedText.vue'
 import { useMyMapStore } from '@/stores/myMapStore'
 import { computed, inject, type Ref } from 'vue'
 
@@ -75,9 +71,17 @@ const filteredLength = computed(() => {
 .MyMapAtlasSummary {
   display: flex;
   width: 100%;
+  min-width: 0;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   border-radius: 5px;
   padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in;
+}
+.MyMapAtlasSummary:hover {
+  background-color: rgba(var(--v-theme-main-blue), 0.05);
 }
 .MyMapAtlasSummary[style*='display: none'] {
   display: none !important;
@@ -91,10 +95,23 @@ const filteredLength = computed(() => {
   box-shadow: 0px 2px 0px 0px rgb(var(--v-theme-main-blue));
   padding: 0.5rem 1rem;
 }
+
+.MyMapAtlasSummary_content {
+  display: flex;
+  flex-flow: row nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.MyMapAtlasSummary_btn {
+  flex: 0 0 auto;
+}
+
 .MyMapAtlasSummary_logo {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   img {
     width: 2rem;
     height: 2rem;
@@ -113,8 +130,10 @@ const filteredLength = computed(() => {
 .MyMapAtlasSummary_desc {
   display: flex;
   flex-flow: column nowrap;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .MyMapAtlasSummary_title {

@@ -54,5 +54,15 @@ const isShown = computed(() => {
   align-items: center;
   justify-content: space-between;
   border-radius: 3px;
+
+  // Permet aux enfants de rétrécir pour que les titres puissent être tronqués
+  > * {
+    min-width: 0;
+  }
+
+  // Évite que l'ombre / le bas du dernier élément soit rogné en bas du scroll
+  &:last-child {
+    margin-bottom: 0.5rem;
+  }
 }
 </style>

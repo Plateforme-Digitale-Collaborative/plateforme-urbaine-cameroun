@@ -1,40 +1,53 @@
 <template>
-  <div class="MapScale maplibregl-ctrl maplibregl-ctrl-group">{{ scale }}</div>
+  <div v-if="scale" class="MapScale maplibregl-ctrl maplibregl-ctrl-group">{{ scale }}</div>
 </template>
+
 <script setup lang="ts">
 import { useMyMapStore } from '@/stores/myMapStore'
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+
 const mapStore = useMyMapStore()
 const map = computed(() => mapStore.myMap?.map)
 const zoomLevel = ref(0)
-const mapCenter: Ref<maplibregl.LngLat | null> = ref(null)
+const latitude = ref<number | null>(null)
+
+function updateFromMap() {
+  const currentMap = map.value
+  if (!currentMap) return
+  zoomLevel.value = currentMap.getZoom()
+  latitude.value = currentMap.getCenter().lat
+}
+
 watch(
-  () => map.value,
-  () => {
-    if (map.value) {
-      map?.value?.on('zoomend', () => {
-        zoomLevel.value = map!.value!.getZoom()
-        mapCenter.value = map!.value!.getCenter()
-      })
-    }
+  map,
+  (currentMap, _oldMap, onCleanup) => {
+    if (!currentMap) return
+    // Calcul initial : sans cela, l'échelle reste vide jusqu'au premier zoom
+    updateFromMap()
+    currentMap.on('zoom', updateFromMap)
+    currentMap.on('moveend', updateFromMap)
+
+    onCleanup(() => {
+      currentMap.off('zoom', updateFromMap)
+      currentMap.off('moveend', updateFromMap)
+    })
   },
   { immediate: true }
 )
 
 const scale = computed(() => {
-  if (!map.value) return ''
-  if (!mapCenter.value) return ''
+  if (!map.value || latitude.value === null) return ''
 
-  // This is the math formula to calculate the scale from a latitude and a zoom level and a device pixel ratio
-  // This formula seems based for 256x256 tiles
+  // Formule de calcul de l'échelle à partir de la latitude, du zoom et du ratio de pixels
+  // Cette formule est basée sur des tuiles de 256x256
   const dpi = 96 * devicePixelRatio
   const metersPerPixel =
-    (156543.03 * Math.cos((mapCenter.value!.lat * Math.PI) / 180)) / Math.pow(2, zoomLevel.value)
+    (156543.03 * Math.cos((latitude.value * Math.PI) / 180)) / Math.pow(2, zoomLevel.value)
 
   const pixelsPerCm = dpi / 2.54
   const groundDistanceMeters = metersPerPixel * pixelsPerCm
-  let scaleDenominator: number | string = groundDistanceMeters * 100
-  // Adapt formula for 512x512 tiles if needed
+  let scaleDenominator = groundDistanceMeters * 100
+  // Adaptation de la formule pour des tuiles de 512x512 si nécessaire
   if (mapStore.tileSize === 512) {
     scaleDenominator = scaleDenominator / 2
   }
@@ -59,5 +72,7 @@ function roundScale(scale: number) {
   padding: 0.5rem 1rem;
   display: flex;
   align-items: center;
+  margin: 0 !important;
+  white-space: nowrap;
 }
 </style>
