@@ -1,0 +1,27 @@
+{
+  "services": {
+    "title": "Nos services",
+    "subtitle": "Découvrez les services et applications connectés à la plateforme, et accédez-y en un clic.",
+    "card": {
+      "access": "Accéder au service",
+      "soon": "Bientôt disponible",
+      "accessAria": "Accéder à {name}",
+      "soonAria": "{name} (bientôt disponible)",
+      "logoAlt": "Logo {name}"
+    },
+    "items": {
+      "banoc": {
+        "description": "BANOC est un service de la plateforme dédié à la consultation, au partage et à la valorisation de données et de ressources de référence. Il offre aux acteurs un point d'accès unique, simple et structuré, pour retrouver l'information utile, la réutiliser dans leurs projets et nourrir une connaissance commune du territoire."
+      },
+      "cadastre-polyvalent": {
+        "description": "Le Cadastre Polyvalent propose une vision multi-usages du territoire : parcelles, occupation du sol, informations foncières et données urbaines réunies au même endroit. Il aide les collectivités et les acteurs de l'aménagement à mieux planifier, à sécuriser les décisions foncières et à suivre l'évolution de la ville dans la durée."
+      },
+      "sigcom": {
+        "description": "SIGCOM est le système d'information géographique des communes. Il met à disposition des maires et des équipes municipales un tableau de bord clair, des données territoriales à jour et des outils d'aide à la décision, pour piloter l'action communale, suivre les équipements et mieux répondre aux besoins des populations."
+      },
+      "smartcity": {
+        "description": "SmartCity rassemble des services numériques pour des villes plus intelligentes et plus durables. Suivi des indicateurs urbains, mobilité, environnement, gestion des services publics : l'objectif est de donner aux décideurs une vue d'ensemble et des informations fiables pour piloter la ville au quotidien."
+      }
+    }
+  }
+}

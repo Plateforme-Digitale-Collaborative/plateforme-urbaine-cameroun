@@ -33,7 +33,7 @@ export class NavigationTabsService {
       {
         name: i18n.t('header.services'),
         value: NavigationTabs.SERVICES,
-        disabled: true,
+        disabled: false,
         route: {
           name: 'services'
         }
