@@ -137,21 +137,39 @@ export class AppLayersService {
     const myMapStore = useMyMapStore()
     if (myMapStore.myMap) {
       const geojson = this.getGeojsonPerItemType(itemType)
-      const icon = new URL(`/src/assets/images/icons/map/${itemType}_icon.png`, import.meta.url)
-        .href
-      myMapStore.myMap.addSource(itemType, geojson)
+      const icon = new URL(`/src/assets/images/icons/map/${itemType}_icon.png`, import.meta.url).href
+
+      // 1. Source avec clustering
+      myMapStore.myMap.addSource(itemType, geojson, {
+        cluster: true,
+        clusterRadius: 50,
+        clusterMaxZoom: 14
+      })
+
+      // 2. Image de l'icône
       await myMapStore.myMap.addImage(icon, itemType)
+
+      // 3. Couches des clusters (cercle + compteur)
+      myMapStore.myMap.addClusterLayers(itemType)
+
+      // 4. Couche d'icônes, uniquement pour les points non regroupés
       const layout: maplibregl.LayerSpecification['layout'] = {
         'icon-image': itemType,
-        'icon-size': 0.4
+        'icon-size': 0.4,
+        'icon-allow-overlap': true
       }
-      myMapStore.myMap.addLayer(itemType, { layout })
+      myMapStore.myMap.addLayer(itemType, {
+        layout,
+        filter: ['!', ['has', 'point_count']]
+      })
+
       myMapStore.myMap.listenToHoveredFeature(itemType)
     }
     return
   }
 
   static getGeojsonPerItemType(itemType: ItemType): PersistentGeoJSON {
+    
     switch (itemType) {
       case ItemType.ACTOR:
         return MapService.getGeojson(this.filteredActors.value)
@@ -163,12 +181,21 @@ export class AppLayersService {
     }
   }
 
+  // static filterByThematic(items: ThematicItem[], subLayers: Layer[]) {
+  //   const activeThematics = subLayers.filter((l) => l.isShown).map((l) => l.name)
+  //   const allShown = activeThematics.length === subLayers.length
+  //   return items.filter((item) => {
+  //     const thematics = item.thematics ?? []
+  //     if (thematics.length === 0) return allShown
+  //     return activeThematics.some((t) => thematics.includes(t as Thematic))
+  //   })
+  // }
+
   static filterByThematic(items: ThematicItem[], subLayers: Layer[]) {
-    const activeThematics: Layer['name'][] = subLayers
-      .filter((layer: Layer) => layer.isShown)
-      .map((layer: Layer) => layer.name)
+    const activeThematics = subLayers.filter((l) => l.isShown).map((l) => l.name)
     return items.filter((item) => {
-      return activeThematics.some((thematic) => item.thematics.includes(thematic as Thematic))
+      const thematics = item.thematics ?? []
+      return thematics.length > 0 && activeThematics.some((t) => thematics.includes(t as Thematic))
     })
   }
 }

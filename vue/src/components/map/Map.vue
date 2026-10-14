@@ -12,12 +12,50 @@ import { debounce } from '@/services/utils/UtilsService'
 import { useApplicationStore } from '@/stores/applicationStore'
 import maplibregl, { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { computed, onMounted, ref, type Ref, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, ref, type Ref, useTemplateRef, watch, onBeforeUnmount } from 'vue'
 
 const applicationStore = useApplicationStore()
 const triggerZoomReset = computed(() => applicationStore.triggerZoomReset)
 const map: Ref<maplibregl.Map | null> = ref(null)
 const resetMapExtentControl = useTemplateRef('reset-map-extent-control')
+const FALLBACK_COLOR = '#1B4F9C'
+const iconColors = new Map<string, string>()
+// Couleur dominante (la plus saturée) de l'icône enregistrée sous ce nom
+const getIconColor = (name: string): string => {
+  const cached = iconColors.get(name)
+  if (cached) return cached
+  const m = map.value
+  if (!m?.hasImage(name)) return FALLBACK_COLOR
+
+  const img: any = m.getImage(name)
+  const px: Uint8Array | Uint8ClampedArray | undefined = img?.data?.data ?? img?.data
+  if (!px) return FALLBACK_COLOR
+
+  const buckets = new Map<string, { n: number; r: number; g: number; b: number }>()
+  for (let i = 0; i < px.length; i += 4) {
+    const [r, g, b, a] = [px[i], px[i + 1], px[i + 2], px[i + 3]]
+    if (a < 200) continue // ignore la transparence
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    if (max - min < 40) continue // ignore blancs, gris, noirs
+    const key = `${r >> 5}-${g >> 5}-${b >> 5}`
+    const bucket = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 }
+    bucket.n++
+    bucket.r += r
+    bucket.g += g
+    bucket.b += b
+    buckets.set(key, bucket)
+  }
+  const top = [...buckets.values()].sort((a, b) => b.n - a.n)[0]
+  const color = top
+    ? `rgb(${Math.round(top.r / top.n)}, ${Math.round(top.g / top.n)}, ${Math.round(top.b / top.n)})`
+    : FALLBACK_COLOR
+  iconColors.set(name, color)
+  return color
+}
+let selectionMarker: maplibregl.Marker | null = null
+
+
 const props = withDefaults(
   defineProps<{
     bounds?: maplibregl.LngLatBounds
@@ -35,6 +73,21 @@ const popup = ref(new maplibregl.Popup({ closeOnClick: false }))
 const hoveredFeatureId: Ref<string | null> = ref(null)
 const activeFeatureId: Ref<string | null> = ref(null)
 
+const showSelection = (coordinates: maplibregl.LngLatLike, layerName: string) => {
+  if (map.value == null) return
+  if (!selectionMarker) {
+    const el = document.createElement('div')
+    el.className = 'Map__selectionPulse'
+    selectionMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+  }
+  selectionMarker.getElement().style.setProperty('--selection-color', getIconColor(layerName))
+  selectionMarker.setLngLat(coordinates).addTo(map.value)
+}
+
+const clearSelection = () => {
+  selectionMarker?.remove()
+}
+
 onMounted(() => {
   const apiKey = import.meta.env.VITE_MAPTILER_API_KEY
   map.value = new maplibregl.Map({
@@ -44,6 +97,8 @@ onMounted(() => {
     zoom: 1,
     attributionControl: false
   })
+
+  onBeforeUnmount(() => clearSelection())
 
   map.value.dragRotate.disable()
   map.value.touchZoomRotate.disableRotation()
@@ -93,11 +148,16 @@ const getData = async (sourceName: string | number) => {
   if (source) return await source.getData()
 }
 
-const addSource = (sourceName: string, geojson: GeoJSON.GeoJSON) => {
+const addSource = (
+  sourceName: string,
+  geojson: GeoJSON.GeoJSON,
+  options: { cluster?: boolean; clusterRadius?: number; clusterMaxZoom?: number } = {}
+) => {
   if (map.value?.getSource(sourceName)) return
   map.value?.addSource(sourceName, {
     type: 'geojson',
-    data: geojson
+    data: geojson,
+    ...options
   })
 }
 
@@ -115,7 +175,7 @@ const setPaintProperty = (layerName: string, property: string, value: any) => {
 
 const addLayer = async (
   layerName: string,
-  options: { layout: maplibregl.LayerSpecification['layout'] }
+  options: { layout: maplibregl.LayerSpecification['layout']; filter?: maplibregl.FilterSpecification }
 ) => {
   if (map.value && map.value?.getLayer(layerName)) return
   map.value?.addLayer({
@@ -123,8 +183,53 @@ const addLayer = async (
     type: 'symbol',
     source: layerName,
     layout: options.layout,
-    metadata: { isPersistent: true } // used to have persistent layers when switching basemaps
+    ...(options.filter ? { filter: options.filter } : {}),
+    metadata: { isPersistent: true }
   })
+}
+
+const addClusterLayers = (sourceName: string, color = '#1B4F9C') => {
+  const m = map.value
+  const clustersId = `${sourceName}-clusters`
+  if (!m || m.getLayer(clustersId)) return
+
+  m.addLayer({
+    id: clustersId,
+    type: 'circle',
+    source: sourceName,
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': color,
+      'circle-radius': ['step', ['get', 'point_count'], 16, 5, 22, 10, 28],
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#fff'
+    },
+    metadata: { isPersistent: true }
+  })
+
+  m.addLayer({
+    id: `${sourceName}-cluster-count`,
+    type: 'symbol',
+    source: sourceName,
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': ['get', 'point_count_abbreviated'],
+      'text-font': ['Noto Sans Regular'], // police disponible dans le style MapTiler streets-v2
+      'text-size': 13
+    },
+    paint: { 'text-color': '#ffffff' },
+    metadata: { isPersistent: true }
+  })
+
+  m.on('click', clustersId, async (e) => {
+    const feature = m.queryRenderedFeatures(e.point, { layers: [clustersId] })[0]
+    if (!feature) return
+    const source = m.getSource(sourceName) as GeoJSONSource
+    const zoom = await source.getClusterExpansionZoom(feature.properties.cluster_id)
+    m.easeTo({ center: (feature.geometry as GeoJSON.Point).coordinates as [number, number], zoom })
+  })
+  m.on('mouseenter', clustersId, () => (m.getCanvas().style.cursor = 'pointer'))
+  m.on('mouseleave', clustersId, () => (m.getCanvas().style.cursor = ''))
 }
 
 const addImage = async (path: string, name: string) => {
@@ -149,6 +254,7 @@ const addPopup = debounce(
     popup.value._onClose = () => {
       activeFeatureId.value = null
       popup.value.removeClassName('show')
+      clearSelection()
     }
   },
   100
@@ -193,6 +299,7 @@ const addPopupOnClick = (layerName: string, popupHtml: any, isComponent = true) 
     if (map.value == null) return
     activeFeatureId.value = e.features[0]?.properties?.id
     const coordinates = e.features[0].geometry?.coordinates?.slice()
+    showSelection(coordinates, layerName)
     addPopup(coordinates, popupHtml, isComponent)
     e.preventDefault()
   })
@@ -240,6 +347,7 @@ defineExpose({
   addPopupOnClick,
   addImage,
   addLayer,
+  addClusterLayers, // ← à ajouter
   flyTo,
   listenToHoveredFeature,
   removeLayer,
@@ -247,7 +355,9 @@ defineExpose({
   setData,
   getData,
   setLayoutProperty,
-  setPaintProperty
+  setPaintProperty,
+  clearSelection,
+  showSelection
 })
 </script>
 
@@ -389,5 +499,33 @@ defineExpose({
 
 .cursor-crosshair {
   cursor: crosshair !important;
+}
+
+.Map__selectionPulse {
+  --selection-color: #1b4f9c;
+  width: 3rem;
+  height: 3rem;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid var(--selection-color);
+  background: color-mix(in srgb, var(--selection-color) 15%, transparent);
+  pointer-events: none;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 3px solid var(--selection-color);
+    animation: Map__selectionPulse 1.8s ease-out infinite;
+  }
+  &::after {
+    animation-delay: 0.9s;
+  }
+}
+@keyframes Map__selectionPulse {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(2.2); opacity: 0; }
 }
 </style>

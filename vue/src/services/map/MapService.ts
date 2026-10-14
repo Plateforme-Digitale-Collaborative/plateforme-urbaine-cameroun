@@ -10,6 +10,7 @@ export default class MapService {
     Array.prototype.forEach.call(data, (item: any) => {
       if (item.geoData?.coords) {
         geojson.push({
+          type: 'Feature',
           id: item.id,
           properties: {
             id: item.id,
