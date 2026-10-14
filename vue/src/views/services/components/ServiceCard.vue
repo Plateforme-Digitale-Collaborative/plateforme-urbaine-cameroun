@@ -5,13 +5,22 @@
     :style="{ '--service-accent': `rgb(var(--v-theme-${service.color}))` }"
   >
     <div class="ServiceCard__visual">
-      <img
-        v-if="!logoFailed"
-        class="ServiceCard__logo"
-        :src="service.logo"
-        :alt="$t('services.card.logoAlt', { name: service.name })"
-        @error="logoFailed = true"
-      />
+      <template v-if="!logoFailed">
+        <!-- Fond flouté : conteneur propre qui rogne le flou, pour que l'image, elle, puisse déborder -->
+        <div class="ServiceCard__backdropWrap" aria-hidden="true">
+          <div
+            class="ServiceCard__backdrop"
+            :style="{ backgroundImage: `url(${service.logo})` }"
+          />
+        </div>
+        <!-- Image entière, qui sort du cadre au survol -->
+        <img
+          class="ServiceCard__logo"
+          :src="service.logo"
+          :alt="$t('services.card.logoAlt', { name: service.name })"
+          @error="logoFailed = true"
+        />
+      </template>
       <span v-else class="ServiceCard__monogram" aria-hidden="true">{{ monogram }}</span>
     </div>
 
@@ -52,9 +61,10 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
 
 <style scoped>
 .ServiceCard {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  overflow: hidden;
+  /* PAS d'overflow: hidden ici : l'image doit pouvoir sortir de la carte */
   background: #fff;
   border: 1px solid rgba(var(--v-theme-light-grey), 0.9);
   border-radius: 28px;
@@ -68,15 +78,21 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
   box-shadow: 0 18px 36px -16px rgba(0, 0, 0, 0.2);
 }
 
+/* La carte survolée passe au-dessus des cartes voisines */
+.ServiceCard:has(.ServiceCard__visual:hover) {
+  z-index: 10;
+}
+
 /* ---- Côté image ---- */
 .ServiceCard__visual {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
-  padding: 40px;
-  overflow: hidden;
+  min-height: 340px;
+  cursor: zoom-in;
+  /* arrondi du côté extérieur (remplace l'overflow: hidden de la carte) */
+  border-radius: 27px 0 0 27px;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--service-accent) 20%, white),
@@ -84,35 +100,46 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
   );
 }
 
-.ServiceCard__visual::before,
-.ServiceCard__visual::after {
-  content: '';
+/* Conteneur du fond flouté : c'est lui qui rogne, pas le bloc image */
+.ServiceCard__backdropWrap {
   position: absolute;
-  border-radius: 50%;
-  background: var(--service-accent);
-  opacity: 0.1;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
-.ServiceCard__visual::before {
-  width: 260px;
-  height: 260px;
-  top: -90px;
-  left: -90px;
+.ServiceCard__backdrop {
+  position: absolute;
+  inset: -24px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(22px) saturate(1.1);
+  opacity: 0.55;
 }
 
-.ServiceCard__visual::after {
-  width: 180px;
-  height: 180px;
-  right: -60px;
-  bottom: -60px;
-}
-
+/* Image entière dans le cadre au repos */
 .ServiceCard__logo {
-  position: relative;
-  z-index: 1;
-  max-width: 240px;
-  max-height: 170px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
+  z-index: 1;
+  transform: scale(1);
+  transform-origin: left center; /* le zoom s'étend vers le texte */
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+  will-change: transform;
+}
+
+/* Au survol : l'image sort du cadre, passe au-dessus du texte et se détache avec une ombre */
+.ServiceCard__visual:hover .ServiceCard__logo,
+.ServiceCard__visual:focus-within .ServiceCard__logo {
+  transform: scale(1.5);
+  z-index: 20;
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35));
 }
 
 .ServiceCard__monogram {
@@ -196,6 +223,11 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
 /* ---- Disposition croisée (desktop) ---- */
 .ServiceCard--reverse .ServiceCard__visual {
   order: 2;
+  border-radius: 0 27px 27px 0;
+}
+
+.ServiceCard--reverse .ServiceCard__logo {
+  transform-origin: right center; /* le zoom s'étend vers le texte (à gauche) */
 }
 
 .ServiceCard--reverse .ServiceCard__content {
@@ -208,14 +240,20 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
     grid-template-columns: 1fr;
   }
 
-  .ServiceCard--reverse .ServiceCard__visual,
+  .ServiceCard__visual,
+  .ServiceCard--reverse .ServiceCard__visual {
+    order: 0;
+    min-height: 260px;
+    border-radius: 27px 27px 0 0;
+  }
+
   .ServiceCard--reverse .ServiceCard__content {
     order: 0;
   }
 
-  .ServiceCard__visual {
-    min-height: 220px;
-    padding: 28px;
+  .ServiceCard__logo,
+  .ServiceCard--reverse .ServiceCard__logo {
+    transform-origin: center top;
   }
 
   .ServiceCard__content {
@@ -227,10 +265,23 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
   }
 }
 
+/* ---- Écrans tactiles : pas de survol, donc pas de zoom ---- */
+@media (hover: none) {
+  .ServiceCard__visual {
+    cursor: default;
+  }
+
+  .ServiceCard__visual:hover .ServiceCard__logo {
+    transform: none;
+    filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ServiceCard,
   .ServiceCard__link,
-  .ServiceCard__linkIcon {
+  .ServiceCard__linkIcon,
+  .ServiceCard__logo {
     transition: none;
   }
 }

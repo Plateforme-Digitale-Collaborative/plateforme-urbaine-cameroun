@@ -17,7 +17,7 @@ export const SERVICES: PlatformService[] = [
     id: 'banoc',
     name: 'BANOC',
     descriptionKey: 'services.items.banoc.description',
-    logo: '/images/services/banoc.svg',
+    logo: '/img/services/banoc.jpeg',
     url: 'https://banoc.cm/',
     color: 'main-blue'
   },
@@ -25,7 +25,7 @@ export const SERVICES: PlatformService[] = [
     id: 'cadastre-polyvalent',
     name: 'Cadastre Polyvalent',
     descriptionKey: 'services.items.cadastre-polyvalent.description',
-    logo: '/images/services/cadastre-polyvalent.svg',
+    logo: '/img/services/cadastre_polyvalent.jpeg',
     url: 'https://soa.position.cm/',
     color: 'main-green'
   },
@@ -33,7 +33,7 @@ export const SERVICES: PlatformService[] = [
     id: 'sigcom',
     name: 'SIGCOM',
     descriptionKey: 'services.items.sigcom.description',
-    logo: '/img/services/logo-sigcom.png',
+    logo: '/img/services/sigcom.jpeg',
     url: 'https://sigcom.minddevel.cm/',
     color: 'bright-blue'
   },
@@ -41,7 +41,7 @@ export const SERVICES: PlatformService[] = [
     id: 'smartcity',
     name: 'MboaCity',
     descriptionKey: 'services.items.smartcity.description',
-    logo: '/images/services/smartcity.svg',
+    logo: '/img/services/smartcity.png',
     url: 'https://smartcity-cameroun.flutterflow.app',
     color: 'main-yellow'
   }
