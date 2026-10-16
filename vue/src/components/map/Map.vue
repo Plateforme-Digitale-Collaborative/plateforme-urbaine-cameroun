@@ -55,7 +55,6 @@ const getIconColor = (name: string): string => {
 }
 let selectionMarker: maplibregl.Marker | null = null
 
-
 const props = withDefaults(
   defineProps<{
     bounds?: maplibregl.LngLatBounds
@@ -72,6 +71,8 @@ const props = withDefaults(
 const popup = ref(new maplibregl.Popup({ closeOnClick: false }))
 const hoveredFeatureId: Ref<string | null> = ref(null)
 const activeFeatureId: Ref<string | null> = ref(null)
+// Nom de la couche (ItemType) de l'élément actuellement sélectionné
+const activeLayerName: Ref<string | null> = ref(null)
 
 const showSelection = (coordinates: maplibregl.LngLatLike, layerName: string) => {
   if (map.value == null) return
@@ -86,6 +87,20 @@ const showSelection = (coordinates: maplibregl.LngLatLike, layerName: string) =>
 
 const clearSelection = () => {
   selectionMarker?.remove()
+}
+
+// Fermeture du popup (croix, ou appel à closeSelection) : on arrête aussi le clignotement
+popup.value.on('close', () => {
+  activeFeatureId.value = null
+  activeLayerName.value = null
+  popup.value.removeClassName('show')
+  clearSelection()
+})
+
+// Ferme le popup et arrête le clignotement (ex : couche décochée)
+const closeSelection = () => {
+  popup.value.remove() // déclenche l'événement 'close'
+  clearSelection()
 }
 
 onMounted(() => {
@@ -251,11 +266,6 @@ const addPopup = debounce(
     popup.value.addClassName('show')
     flyTo(coordinates)
     map.value.once('moveend', ensurePopupInView)
-    popup.value._onClose = () => {
-      activeFeatureId.value = null
-      popup.value.removeClassName('show')
-      clearSelection()
-    }
   },
   100
 )
@@ -298,6 +308,7 @@ const addPopupOnClick = (layerName: string, popupHtml: any, isComponent = true) 
   map.value.on('click', layerName, (e: any) => {
     if (map.value == null) return
     activeFeatureId.value = e.features[0]?.properties?.id
+    activeLayerName.value = layerName
     const coordinates = e.features[0].geometry?.coordinates?.slice()
     showSelection(coordinates, layerName)
     addPopup(coordinates, popupHtml, isComponent)
@@ -341,13 +352,14 @@ watch(triggerZoomReset, () => {
 defineExpose({
   map,
   activeFeatureId,
+  activeLayerName,
   hoveredFeatureId,
   addSource,
   addPopup,
   addPopupOnClick,
   addImage,
   addLayer,
-  addClusterLayers, // ← à ajouter
+  addClusterLayers,
   flyTo,
   listenToHoveredFeature,
   removeLayer,
@@ -357,6 +369,7 @@ defineExpose({
   setLayoutProperty,
   setPaintProperty,
   clearSelection,
+  closeSelection,
   showSelection
 })
 </script>
@@ -525,7 +538,13 @@ defineExpose({
   }
 }
 @keyframes Map__selectionPulse {
-  from { transform: scale(1); opacity: 0.8; }
-  to { transform: scale(2.2); opacity: 0; }
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 </style>

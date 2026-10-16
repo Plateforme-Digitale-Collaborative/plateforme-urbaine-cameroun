@@ -4,6 +4,7 @@
     <div class="AdminStatsPanel__header">
       <v-btn-toggle
         v-model="statsStore.days"
+        class="AdminStatsPanel__range"
         mandatory
         density="compact"
         color="main-blue"
@@ -20,7 +21,7 @@
       <div class="AdminStatsPanel__content" v-if="hasData" key="content">
         <section class="AdminStatsPanel__section">
           <SectionBanner :text="$t('admin.stats.audience.title')" />
-          <div class="AdminStatsPanel__grid AdminStatsPanel__grid--audience">
+          <div class="AdminStatsPanel__grid">
             <!-- <DiverCityStaticKpi
               :label="$t('admin.stats.audience.totalViews')"
               :value="statsStore.audience?.totalViews ?? 0"
@@ -37,7 +38,9 @@
               icon="$clockOutline"
             />
           </div>
-          <StatsLineChart :series="audienceSeries" />
+          <div class="AdminStatsPanel__chart">
+            <StatsLineChart :series="audienceSeries" />
+          </div>
           <div class="AdminStatsPanel__subTitle">
             {{ $t('admin.stats.audience.topPages') }} ({{ totalViews }})
           </div>
@@ -58,7 +61,9 @@
               icon="$accountCircle"
             />
           </div>
-          <StatsLineChart :series="connectionsSeries" />
+          <div class="AdminStatsPanel__chart">
+            <StatsLineChart :series="connectionsSeries" />
+          </div>
 
           <div class="AdminStatsPanel__subTitle">
             {{ $t('admin.stats.connections.topCountries') }}
@@ -72,12 +77,15 @@
           <div class="AdminStatsPanel__subTitle">
             {{ $t('admin.stats.connections.origins') }}
           </div>
-          <StatsConnectionsTable
-            :items="statsStore.connections?.recentConnections ?? []"
-            :headers="connectionsTableHeaders"
-            :empty-label="$t('admin.stats.empty')"
-            :unknown-label="$t('admin.stats.connections.unknownCountry')"
-          />
+          <!-- Le tableau défile horizontalement dans son cadre au lieu de déborder de la page -->
+          <div class="AdminStatsPanel__tableScroll">
+            <StatsConnectionsTable
+              :items="statsStore.connections?.recentConnections ?? []"
+              :headers="connectionsTableHeaders"
+              :empty-label="$t('admin.stats.empty')"
+              :unknown-label="$t('admin.stats.connections.unknownCountry')"
+            />
+          </div>
         </section>
 
         <section class="AdminStatsPanel__section">
@@ -161,17 +169,17 @@ const connectionsTableHeaders = computed(() => ({
 }))
 
 const audienceSeries = computed(
-  () =>
-    statsStore.audience?.dailySeries.map((p) => ({ date: p.date, value: p.views })) ?? []
+  () => statsStore.audience?.dailySeries.map((p) => ({ date: p.date, value: p.views })) ?? []
 )
 
 const connectionsSeries = computed(
-  () =>
-    statsStore.connections?.dailySeries.map((p) => ({ date: p.date, value: p.count })) ?? []
+  () => statsStore.connections?.dailySeries.map((p) => ({ date: p.date, value: p.count })) ?? []
 )
 
 const topPagesItems = computed(
-  () => statsStore.audience?.topPages.map((p) => ({ path: p.path, label: p.path, views: p.views })) ?? []
+  () =>
+    statsStore.audience?.topPages.map((p) => ({ path: p.path, label: p.path, views: p.views })) ??
+    []
 )
 
 const topActorsItems = computed(
@@ -198,6 +206,17 @@ const topProjectsItems = computed(
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; // permet au panneau de rétrécir dans son parent flex/grid
+
+  // Tous les enfants directs peuvent rétrécir : évite qu'un contenu large ne pousse la page
+  > *,
+  &__content > *,
+  &__section > * {
+    min-width: 0;
+    max-width: 100%;
+  }
 
   &__header {
     display: flex;
@@ -214,27 +233,59 @@ const topProjectsItems = computed(
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    min-width: 0;
   }
 
+  // Les colonnes s'adaptent toutes seules à la largeur disponible
   &__grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     gap: 2rem;
 
-    &--audience {
-      grid-template-columns: repeat(2, 1fr);
+    > * {
+      min-width: 0;
     }
   }
 
   &__contentGrid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
     gap: 2rem;
+
+    > * {
+      min-width: 0;
+    }
+  }
+
+  // Graphiques : prennent la largeur du parent, jamais plus
+  &__chart {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+
+    canvas,
+    svg {
+      max-width: 100%;
+    }
+  }
+
+  // Tableau : défilement horizontal interne
+  &__tableScroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    > * {
+      min-width: 36rem; // garde les colonnes lisibles, le cadre défile en dessous
+    }
   }
 
   &__subTitle {
     font-weight: 700;
     color: rgb(var(--v-theme-main-blue));
+    overflow-wrap: anywhere;
+    margin-bottom: 0.5rem;
   }
 
   &__loading,
@@ -246,19 +297,51 @@ const topProjectsItems = computed(
     gap: 0.5rem;
     padding: 3rem 1rem;
     color: rgb(var(--v-theme-dark-grey));
+    text-align: center;
   }
 
   &__loadingText {
     font-size: $font-size-sm;
   }
+
+  // Chemins de pages / slugs longs : on coupe au lieu de déborder
+  .StatsTopList,
+  .StatsCountryList {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
 
 @media (max-width: $bp-md) {
   .AdminStatsPanel {
+    gap: 1.75rem;
+
+    &__content {
+      gap: 1.75rem;
+    }
+
+    &__section {
+      gap: 1.25rem;
+    }
+
     &__grid,
-    &__grid--audience,
     &__contentGrid {
-      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    // Le sélecteur de période prend toute la largeur
+    &__header {
+      justify-content: stretch;
+    }
+
+    &__range {
+      width: 100%;
+
+      .v-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0 0.5rem;
+      }
     }
   }
 }

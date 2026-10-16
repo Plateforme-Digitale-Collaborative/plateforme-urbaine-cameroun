@@ -26,17 +26,17 @@
 <script setup lang="ts">
 import { useMyMapStore } from '@/stores/myMapStore'
 import ProjectCard from '@/views/projects/components/ProjectCard.vue'
-import { computed, onMounted, useTemplateRef, watch } from 'vue'
+import { computed, useTemplateRef, watch } from 'vue'
 import ActorCard from '@/views/actors/components/ActorCard.vue'
 import { ItemType } from '@/models/enums/app/ItemType'
 import type { Project } from '@/models/interfaces/Project'
 import type { Resource } from '@/models/interfaces/Resource'
-import ResourceCard from '@/views/resources/components/ResourceCard.vue'
 import type { Actor } from '@/models/interfaces/Actor'
 import type { LngLat } from 'maplibre-gl'
 import QgisCard from './QgisLayersQuery/QgisCard.vue'
 import type { FilteredQGISLayerFeatures } from '@/models/interfaces/map/AtlasMap'
 import MapService from '@/services/map/MapService'
+import { AppLayersService } from '@/services/map/AppLayersService'
 import type { Item } from '@/models/interfaces/Item'
 
 const myMapStore = useMyMapStore()
@@ -45,17 +45,25 @@ const activeItemCard = useTemplateRef('active-item-card')
 const myMap = computed(() => myMapStore.myMap)
 const map = computed(() => myMap.value?.map)
 
-onMounted(async () => {
-  await MapService.isLoaded(map.value, () => addPopupOnClick())
-  await showPopupOnInit()
-})
+// Couches cliquables (RESOURCE n'a pas de couche sur la carte)
+const POPUP_LAYERS = [ItemType.ACTOR, ItemType.PROJECT]
 
+// Les handlers de clic sont enregistrés UNE seule fois par instance de carte
+let handlersMap: unknown = null
+const registerClickHandlers = () => {
+  if (!myMap.value || !map.value || !activeItemCard.value) return
+  if (handlersMap === map.value) return
+  handlersMap = map.value
+  POPUP_LAYERS.forEach((layer) => myMap.value?.addPopupOnClick(layer, activeItemCard.value, false))
+}
+
+// Se déclenche dès que la carte existe, y compris au remontage de la vue
 watch(
-  () => [myMapStore.activeItem, myMapStore.isMapAlreadyBeenMounted],
-  async () => {
-    await MapService.isLoaded(map.value, () => addPopupOnClick())
-    await showPopupOnInit()
-  }
+  map,
+  (m) => {
+    if (m) MapService.isLoaded(m, registerClickHandlers)
+  },
+  { immediate: true }
 )
 
 watch(
@@ -67,41 +75,53 @@ watch(
   }
 )
 
-const addPopupOnClick = () => {
-  if (myMap.value == null) return
-  Object.values(ItemType).forEach((itemLayer) => {
-    myMap.value?.addPopupOnClick(itemLayer, activeItemCard.value, false)
-  })
-}
+// Réaffiche le popup une fois l'item chargé (sans réenregistrer de handlers)
+watch(
+  () => [myMapStore.activeItem, myMapStore.isMapAlreadyBeenMounted],
+  async () => {
+    await MapService.isLoaded(map.value, () => showPopup())
+  }
+)
 
 const showPopup = () => {
   if (myMap.value == null) return
   if (myMapStore.activeItemType === 'QGIS') {
     myMap.value.addPopup(myMapStore.activeItemCoords as LngLat, activeItemCard.value, false)
-  } else {
-    Object.values(ItemType).forEach((itemType) => {
-      myMap.value?.addPopupOnClick(itemType, activeItemCard.value, false)
-    })
+    return
   }
-  if (map.value) {
-    if (myMapStore.activeItem != null && myMap.value && myMapStore.activeItemType !== 'QGIS') {
-      if ((myMapStore.activeItem as Item)?.geoData?.coords) {
-        myMap.value.addPopup(
-          (myMapStore.activeItem as Item)?.geoData?.coords,
-          activeItemCard.value,
-          false
-        )
-      }
-    }
-  }
+  const coords = (myMapStore.activeItem as Item | null)?.geoData?.coords
+  if (coords) myMap.value.addPopup(coords, activeItemCard.value, false)
 }
 
-const showPopupOnInit = async () => {
-  await MapService.isLoaded(map.value, () => {
-    addPopupOnClick()
-    showPopup()
-  })
+// L'élément sélectionné est-il encore affiché sur la carte ?
+const isActiveItemStillVisible = () => {
+  const id = myMap.value?.activeFeatureId
+  const layerName = myMap.value?.activeLayerName
+  if (!id || !layerName) return true
+
+  const isProject = layerName === ItemType.PROJECT
+  const mainLayer = isProject ? myMapStore.projectLayer : myMapStore.actorLayer
+  if (!mainLayer?.isShown) return false
+
+  const items = isProject
+    ? AppLayersService.filteredProjects.value
+    : AppLayersService.filteredActors.value
+  return items.some((i: any) => String(i.id) === String(id))
 }
+
+// Couche (ou thématique) décochée : on ferme le popup et on arrête le clignotement
+watch(
+  () => [
+    myMapStore.projectLayer?.isShown,
+    myMapStore.actorLayer?.isShown,
+    myMapStore.projectSubLayers.map((l) => l.isShown),
+    myMapStore.actorSubLayers.map((l) => l.isShown)
+  ],
+  () => {
+    if (!isActiveItemStillVisible()) myMap.value?.closeSelection()
+  },
+  { deep: true }
+)
 </script>
 
 <style lang="scss">

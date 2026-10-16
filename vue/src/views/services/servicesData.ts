@@ -39,7 +39,7 @@ export const SERVICES: PlatformService[] = [
   },
   {
     id: 'smartcity',
-    name: 'MboaCity',
+    name: 'Mboa City',
     descriptionKey: 'services.items.smartcity.description',
     logo: '/img/services/smartcity.png',
     url: 'https://smartcity-cameroun.flutterflow.app',

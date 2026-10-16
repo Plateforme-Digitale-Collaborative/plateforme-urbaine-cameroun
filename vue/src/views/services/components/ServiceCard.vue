@@ -183,6 +183,8 @@ const monogram = computed(() => props.service.name.trim().charAt(0).toUpperCase(
   font-size: 1.1rem;
   line-height: 1.7;
   color: rgb(var(--v-theme-dark-grey));
+  text-align: justify;
+  hyphens: auto; /* évite les grands espaces entre les mots */
 }
 
 .ServiceCard__link {
