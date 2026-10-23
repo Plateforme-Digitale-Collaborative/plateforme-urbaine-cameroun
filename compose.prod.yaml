@@ -23,3 +23,6 @@ services:
       - './symfony/public/media:/app/public/media'
       - './symfony/public/files:/app/public/files'
       - './symfony/config/jwt:/app/config/jwt'
+  
+  nominatim:
+    ports: !reset []

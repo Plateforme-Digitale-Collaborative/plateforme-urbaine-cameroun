@@ -87,7 +87,8 @@ services:
       - ./docker/postgres/data:/var/lib/postgresql/data:rw
 
   nominatim:
-    image: mediagis/nominatim:4.2
+    build: ./docker/nominatim
+    image: puc-nominatim
     ports:
       - ${NOMINATIM_PORT:-7000}:8080
     environment:
