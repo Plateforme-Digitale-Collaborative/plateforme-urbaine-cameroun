@@ -38,7 +38,14 @@ export const useResourceStore = defineStore(StoresList.RESOURCES, () => {
   }
 
   const submitResource = async (resource: Resource, type: FormType) => {
-    if (type !== FormType.CREATE || useUserStore().userIsAdmin()) {
+    const userStore = useUserStore()
+    // Admin, ou point focal / administrateur de page de l'acteur de la ressource : pas de message à l'éditeur,
+    // la validation se fait par le point focal de l'acteur.
+    if (
+      type !== FormType.CREATE ||
+      userStore.userIsAdmin() ||
+      userStore.userManagesActor(resource.actor as never)
+    ) {
       return await saveResource(resource, type)
     }
     resourceForSubmission.value = resource
@@ -52,7 +59,7 @@ export const useResourceStore = defineStore(StoresList.RESOURCES, () => {
       type === FormType.CREATE
         ? await ResourceService.post(resource)
         : await ResourceService.patch(resource)
-    if (type === FormType.CREATE && useUserStore().userIsAdmin()) {
+    if (type === FormType.CREATE && (useUserStore().userIsAdmin() || submittedResource.isValidated)) {
       resources.value.push(submittedResource)
     } else if (type === FormType.EDIT || type === FormType.VALIDATE) {
       updateResource(submittedResource)

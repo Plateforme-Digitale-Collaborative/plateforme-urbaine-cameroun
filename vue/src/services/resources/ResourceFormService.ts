@@ -22,6 +22,7 @@ export class ResourceFormService {
           required_error: i18n.t('forms.errorMessages.required')
         }),
         otherType: z.string().optional(),
+        actor: zodModels.symfonyRelation.nullable().optional(),
         administrativeScopes: z.array(z.nativeEnum(AdministrativeScope)).optional(),
         admin1List: zodModels.admin1Boundaries.optional(),
         admin3List: zodModels.admin3Boundaries.optional(),
@@ -90,6 +91,7 @@ export class ResourceFormService {
       description: useField('description'),
       type: useField('type'),
       otherType: useField('otherType'),
+      actor: useField('actor'),
       file: useField('file'),
       format: useField('format'),
       administrativeScopes: useField('administrativeScopes'),

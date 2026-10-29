@@ -7,6 +7,7 @@ import type { Validateable } from '@/models/interfaces/common/Validateable'
 import type { FileObject } from '@/models/interfaces/object/FileObject'
 import type { SymfonyRelation } from '@/models/interfaces/SymfonyRelation'
 import type { AdministrativeScope } from '../enums/AdministrativeScope'
+import type { Actor } from './Actor'
 import type { Admin1Boundary, Admin3Boundary } from './AdminBoundaries'
 import type { BanocItem } from './common/BanocItem'
 import type { ODDItem } from './common/ODDItem'
@@ -32,6 +33,8 @@ export interface Resource
   startAt: Date
   endAt: Date
   author: string
+  /** Acteur de rattachement (facultatif) : ses point focal et administrateurs de page gèrent la ressource. */
+  actor?: Partial<Actor> | string | null
   previewImage?: BaseMediaObject
   creatorMessage?: string
   administrativeScopes: AdministrativeScope[]

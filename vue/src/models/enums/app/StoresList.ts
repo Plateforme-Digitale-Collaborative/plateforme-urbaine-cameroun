@@ -3,6 +3,7 @@ export enum StoresList {
   ADMIN = 'admin',
   USER = 'user',
   ACTORS = 'actors',
+  ACTOR_TEAM = 'actorTeam',
   HIGHLIGHTS = 'highlights',
   PROJECTS = 'projects',
   ATLAS = 'atlas',

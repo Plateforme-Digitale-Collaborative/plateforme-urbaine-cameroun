@@ -25,6 +25,23 @@
         :createdBy="actor.createdBy"
         @edit="editActor"
       />
+      <ActorPendingBanner :actor="actor" class="mt-4" />
+      <div class="ActorSheetView__manageBar" v-if="isManager">
+        <v-btn
+          variant="outlined"
+          color="main-blue"
+          prepend-icon="$accountGroupOutline"
+          :to="{ name: 'actorManagement', params: { slug: actor.slug } }"
+        >
+          {{ $t('actorTeam.manage') }}
+        </v-btn>
+        <v-btn variant="outlined" color="main-blue" prepend-icon="$plus" @click="addProject">
+          {{ $t('actorTeam.banner.addProject') }}
+        </v-btn>
+        <v-btn variant="outlined" color="main-blue" prepend-icon="$plus" @click="addResource">
+          {{ $t('actorTeam.banner.addResource') }}
+        </v-btn>
+      </div>
       <div class="SheetView__contentCtn my-6" v-if="actor.description">
         <div class="SheetView__title SheetView__title--divider">
           {{ $t('actorPage.description') }}
@@ -130,17 +147,24 @@ import type { Actor } from '@/models/interfaces/Actor'
 import { CommentOrigin } from '@/models/interfaces/Comment'
 import { formatHTMLForSheetView, normalizeUrl } from '@/services/utils/UtilsService'
 import { useActorsStore } from '@/stores/actorsStore'
+import { useActorTeamStore } from '@/stores/actorTeamStore'
 import { useApplicationStore } from '@/stores/applicationStore'
+import { useProjectStore } from '@/stores/projectStore'
+import { useResourceStore } from '@/stores/resourceStore'
 import { useUserStore } from '@/stores/userStore'
 import SheetContentBanner from '@/views/_layout/sheet/SheetContentBanner.vue'
 import UpdateInfoLabel from '@/views/_layout/sheet/UpdateInfoLabel.vue'
 import ActorRelatedContent from '@/views/actors/components/ActorRelatedContent.vue'
+import ActorPendingBanner from '@/views/actors/components/team/ActorPendingBanner.vue'
 import { computed, onMounted, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 
 const appStore = useApplicationStore()
 const userStore = useUserStore()
 const actorsStore = useActorsStore()
+const teamStore = useActorTeamStore()
+const projectStore = useProjectStore()
+const resourceStore = useResourceStore()
 const actor = computed(() => actorsStore.selectedActor)
 const actorMapRoute = computed(() => {
   return actor.value
@@ -183,12 +207,33 @@ onMounted(async () => {
   })
 })
 
+// Admin PDC, point focal ou administrateur de page de cet acteur : accès à la gestion de la page
+const isManager = computed(
+  () =>
+    userStore.currentUser != null &&
+    !!actor.value &&
+    (userStore.userIsAdmin() || userStore.userManagesActor(actor.value))
+)
+
+// Modifier la page : admin PDC, point focal ou administrateur de page (dont les modifications passent par validation).
+// Le créateur de la page en est devenu le point focal : il n'a plus de droit propre en tant que « créateur ».
 const isEditable = computed(() => {
   return (
-    (userStore.userIsAdmin() || actor.value?.createdBy?.id === userStore.currentUser?.id) &&
-    userStore.currentUser != null
+    userStore.currentUser != null &&
+    (userStore.userIsAdmin() || (!!actor.value && userStore.userManagesActor(actor.value)))
   )
 })
+
+// Ajouter un projet / une ressource directement rattaché(e) à cet acteur
+function addProject() {
+  teamStore.presetActorId = actor.value?.id ?? null
+  projectStore.isProjectFormShown = true
+}
+
+function addResource() {
+  teamStore.presetActorId = actor.value?.id ?? null
+  resourceStore.isResourceFormShown = true
+}
 
 function editActor() {
   actorsStore.setActorEditionMode(actor.value)
@@ -212,6 +257,12 @@ const formattedDescription = computed(() =>
 }
 
 .ActorSheetView {
+  &__manageBar {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
   &__logo {
     max-width: 100%;
   }

@@ -87,6 +87,10 @@ export const useActorsStore = defineStore(StoresList.ACTORS, () => {
   async function saveActor(actor: ActorSubmission, edit: boolean) {
     const result = await ActorsService.createOrEditActor(actor, edit)
     await getActors()
+    if (!edit) {
+      // Le créateur d'une page (hors admin PDC) en devient le point focal : on recharge ses rôles.
+      await useUserStore().refreshCurrentUser()
+    }
     if (result.isValidated || useUserStore().userIsAdmin()) {
       selectedActor.value = await ActorsService.getActor(result.id)
     }

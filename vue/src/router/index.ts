@@ -67,6 +67,49 @@ const router = createRouter({
       }
     },
     {
+      // Gestion de la page d'un acteur : équipe (point focal / administrateurs), validations, historique
+      path: `/${i18n.t('routes.actors')}/:slug/${i18n.t('routes.actorManagement')}`,
+      name: 'actorManagement',
+      component: () => {
+        const applicationStore = useApplicationStore(pinia)
+        applicationStore.isLoading = true
+        return import('@/views/actors/ActorManagementView.vue')
+      },
+      beforeEnter: async (to, from, next) => {
+        const userStore = useUserStore(pinia)
+        if (!userStore.loginCheck) {
+          await userStore.checkAuthenticated()
+        }
+        if (!userStore.userIsLogged) {
+          useApplicationStore(pinia).isLoading = false
+          next({ path: '/' })
+        } else {
+          next()
+        }
+      }
+    },
+    {
+      path: `/${i18n.t('routes.myActors')}`,
+      name: 'myActors',
+      component: () => {
+        const applicationStore = useApplicationStore(pinia)
+        applicationStore.isLoading = true
+        return import('@/views/member/MyActorsView.vue')
+      },
+      beforeEnter: async (to, from, next) => {
+        const userStore = useUserStore(pinia)
+        if (!userStore.loginCheck) {
+          await userStore.checkAuthenticated()
+        }
+        if (!userStore.userIsLogged) {
+          useApplicationStore(pinia).isLoading = false
+          next({ path: '/' })
+        } else {
+          next()
+        }
+      }
+    },
+    {
       path: `/${i18n.t('routes.projects')}`,
       name: 'projects',
       component: () => {

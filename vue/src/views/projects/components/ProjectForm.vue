@@ -391,6 +391,7 @@
                   density="compact"
                   class="ml-1 mt-0 pa-0"
                   :ripple="false"
+                  :disabled="actorLocked"
                   v-model="projectHasNoOwner"
                 ></v-checkbox>
               </div>
@@ -402,6 +403,7 @@
           v-if="!projectHasNoOwner"
           density="compact"
           variant="outlined"
+          :disabled="actorLocked"
           v-model="form.actor.value.value as Actor"
           :items="actors"
           item-title="name"
@@ -409,7 +411,7 @@
           :error-messages="form.actor.errorMessage.value"
           :placeholder="$t('projects.form.section.projectOwner')"
           @blur="form.actor.handleChange(form.actor.value.value)"
-          clearable
+          :clearable="!actorLocked"
           return-object
         />
         <v-text-field
@@ -539,6 +541,7 @@ import FormSectionTitle from '@/components/text-elements/FormSectionTitle.vue'
 import { AdministrativeScope } from '@/models/enums/AdministrativeScope'
 import { FormType } from '@/models/enums/app/FormType'
 import { NotificationType } from '@/models/enums/app/NotificationType'
+import { UserRoles } from '@/models/enums/auth/UserRoles'
 import { BeneficiaryType } from '@/models/enums/contents/BeneficiaryType'
 import { ODD } from '@/models/enums/contents/ODD'
 import { ProjectFinancingType } from '@/models/enums/contents/ProjectFinancingType'
@@ -558,6 +561,7 @@ import { onInvalidSubmit } from '@/services/forms/FormService'
 import { addNotification } from '@/services/notifications/NotificationService'
 import { ProjectFormService } from '@/services/projects/ProjectFormService'
 import { useActorsStore } from '@/stores/actorsStore'
+import { useActorTeamStore } from '@/stores/actorTeamStore'
 import { useAdminBoundariesStore } from '@/stores/adminBoundariesStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { useUserStore } from '@/stores/userStore'
@@ -570,6 +574,7 @@ import type { FileObject } from '@/models/interfaces/object/FileObject'
 
 const projectStore = useProjectStore()
 const actorsStore = useActorsStore()
+const teamStore = useActorTeamStore()
 const adminBoundariesStore = useAdminBoundariesStore()
 const userStore = useUserStore()
 const { t } = useI18n()
@@ -601,7 +606,22 @@ const submitLabel = computed(() => {
   return i18n.t('forms.' + props.type)
 })
 
-const actors = computed(() => actorsStore.actorsList)
+// Éditeurs et admins : tous les acteurs. Point focal / administrateur de page sans rôle d'éditeur :
+// uniquement les acteurs dont ils gèrent la page (le serveur refuse les autres).
+const actors = computed(() =>
+  userStore.userIsAdmin() || userStore.userHasRole(UserRoles.EDITOR_PROJECTS)
+    ? actorsStore.actorsList
+    : actorsStore.actorsList.filter((actor) => userStore.userManagesActor(actor))
+)
+
+// Formulaire ouvert depuis la page d'un acteur : le responsable du projet est imposé (grisé).
+const presetLocked = ref(false)
+// Verrouillé aussi en modification pour qui n'est ni admin ni éditeur (point focal / admin de page).
+const actorLocked = computed(
+  () =>
+    presetLocked.value ||
+    !(userStore.userIsAdmin() || userStore.userHasRole(UserRoles.EDITOR_PROJECTS))
+)
 
 const otherThematicIsSelected = computed(() => {
   if (form.thematics.value?.value && Array.isArray(form.thematics.value?.value)) {
@@ -666,6 +686,14 @@ onMounted(async () => {
     adminBoundariesStore.getAdmin1(),
     adminBoundariesStore.getAdmin3()
   ])
+  // Formulaire ouvert depuis la page d'un acteur : on pré-sélectionne cet acteur.
+  if (!props.project && teamStore.presetActorId) {
+    const preset = actors.value.find((actor) => actor.id === teamStore.presetActorId)
+    if (preset) {
+      form.actor.value.value = preset
+      presetLocked.value = true
+    }
+  }
   if (props.project) {
     if (props.project.otherActor) {
       projectHasNoOwner.value = true

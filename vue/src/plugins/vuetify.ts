@@ -117,7 +117,13 @@ import {
   mdiInformationOutline,
   mdiPaperclip,
   mdiFileDocumentOutline,
-  mdiCheckCircleOutline
+  mdiCheckCircleOutline,
+  mdiAccountPlusOutline,
+  mdiAccountStarOutline,
+  mdiShieldAccountOutline,
+  mdiSwapHorizontal,
+  mdiAlertCircleOutline,
+  mdiClipboardCheckOutline
 } from '@mdi/js'
 // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
 export default createVuetify({
@@ -213,7 +219,13 @@ export default createVuetify({
       informationOutline: mdiInformationOutline,
       paperclip: mdiPaperclip,
       fileDocumentOutline: mdiFileDocumentOutline,
-      checkCircleOutline: mdiCheckCircleOutline
+      checkCircleOutline: mdiCheckCircleOutline,
+      accountPlusOutline: mdiAccountPlusOutline,
+      accountStarOutline: mdiAccountStarOutline,
+      shieldAccountOutline: mdiShieldAccountOutline,
+      swapHorizontal: mdiSwapHorizontal,
+      alertCircleOutline: mdiAlertCircleOutline,
+      clipboardCheckOutline: mdiClipboardCheckOutline
     },
     sets: {
       mdi

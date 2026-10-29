@@ -7,8 +7,10 @@ use ApiPlatform\Doctrine\Orm\Extension\QueryItemExtensionInterface;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
 use App\Entity\Actor;
+use App\Entity\ActorAssignment;
 use App\Entity\Project;
 use App\Entity\Resource;
+use App\Entity\User\User;
 use App\Model\Enums\UserRoles;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -51,7 +53,26 @@ final readonly class isValidatedExtension implements QueryCollectionExtensionInt
     private function addWhere(QueryBuilder $queryBuilder, string $resourceClass): void
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
-        $queryBuilder->andWhere(sprintf('%s.isValidated = :isValidated', $rootAlias));
+        $user = $this->security->getUser();
+
+        // Les non validés restent visibles de ceux qui gèrent l'acteur concerné (point focal /
+        // administrateurs de page) : ils doivent pouvoir retrouver, corriger et valider leurs éléments.
+        if ($user instanceof User) {
+            $actorCondition = Actor::class === $resourceClass
+                ? sprintf('ua.actor = %s', $rootAlias)
+                : sprintf('ua.actor = %s.actor', $rootAlias);
+
+            $queryBuilder->andWhere(sprintf(
+                '%1$s.isValidated = :isValidated OR EXISTS (SELECT 1 FROM %2$s ua WHERE %3$s AND ua.user = :actorManagerUser AND ua.endedAt IS NULL)',
+                $rootAlias,
+                ActorAssignment::class,
+                $actorCondition
+            ));
+            $queryBuilder->setParameter('actorManagerUser', $user);
+        } else {
+            $queryBuilder->andWhere(sprintf('%s.isValidated = :isValidated', $rootAlias));
+        }
+
         $queryBuilder->setParameter('isValidated', true);
     }
 }

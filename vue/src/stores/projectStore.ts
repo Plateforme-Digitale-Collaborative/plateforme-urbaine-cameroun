@@ -18,6 +18,7 @@ import { i18n } from '@/plugins/i18n'
 import { addNotification } from '@/services/notifications/NotificationService'
 import { ProjectService } from '@/services/projects/ProjectService'
 import { getBboxFromPointsGroup } from '@/services/utils/UtilsService'
+import { useActorsStore } from '@/stores/actorsStore'
 import { useUserStore } from '@/stores/userStore'
 import maplibregl, { LngLatBounds } from 'maplibre-gl'
 import { defineStore } from 'pinia'
@@ -226,7 +227,14 @@ export const useProjectStore = defineStore(StoresList.PROJECTS, () => {
   })
 
   const submitProject = async (project: ProjectSubmission, type: FormType) => {
-    if (type !== FormType.CREATE || useUserStore().userIsAdmin()) {
+    const userStore = useUserStore()
+    // Admin, ou point focal / administrateur de page de l'acteur du projet : pas de message à l'éditeur,
+    // la validation se fait par le point focal de l'acteur.
+    if (
+      type !== FormType.CREATE ||
+      userStore.userIsAdmin() ||
+      userStore.userManagesActor(project.actor)
+    ) {
       return await saveProject(project, type)
     }
     projectForSubmission.value = project
@@ -237,12 +245,16 @@ export const useProjectStore = defineStore(StoresList.PROJECTS, () => {
 
   const saveProject = async (project: ProjectSubmission, type: FormType) => {
     const submittedProject = await ProjectService.createOrUpdate(project, type)
-    if (type === FormType.CREATE && useUserStore().userIsAdmin()) {
+    if (type === FormType.CREATE && (useUserStore().userIsAdmin() || submittedProject.isValidated)) {
       projects.value.push(submittedProject)
     } else if (type === FormType.EDIT || type === FormType.VALIDATE) {
       updateProject(submittedProject)
     }
     addNotification(i18n.t(`notifications.project.${type}`), NotificationType.SUCCESS)
+    // La page de l'acteur affiche ses projets : on la rafraîchit pour les gestionnaires de cette page.
+    if (useUserStore().userManagesActor(submittedProject.actor as never)) {
+      await useActorsStore().getActors()
+    }
     return submittedProject
   }
 

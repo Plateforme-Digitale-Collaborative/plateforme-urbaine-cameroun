@@ -25,6 +25,7 @@ use App\Enum\ResourceFormat;
 use App\Enum\ResourceType;
 use App\Model\Enums\UserRoles;
 use App\Repository\ResourceRepository;
+use App\Security\Voter\ActorContentVoter;
 use App\Security\Voter\DiverCity\SpaceScopedVoter;
 use App\Services\State\Processor\ResourceProcessor;
 use App\Services\State\Provider\DiverCity\EligibleHighlightResourcesProvider;
@@ -66,12 +67,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 #[ApiResource(
     operations: [
+        // Éditeur de ressources, OU point focal / administrateur de page de l'acteur auquel la ressource est rattachée.
+        // (securityPostDenormalize : l'acteur de la ressource n'est connu qu'une fois le corps de requête désérialisé)
         new Post(
-            security: UserRoles::IS_GRANTED_EDITOR_RESSOURCES,
+            securityPostDenormalize: UserRoles::IS_GRANTED_EDITOR_RESSOURCES." or is_granted('".ActorContentVoter::EDIT."', object)",
             processor: ResourceProcessor::class
         ),
         new Patch(
-            security: 'is_granted("ROLE_ADMIN") or object.getCreatedBy() == user',
+            security: 'is_granted("ROLE_ADMIN") or object.getCreatedBy() == user or is_granted("'.ActorContentVoter::EDIT.'", object)',
             processor: ResourceProcessor::class
         ),
         new Delete(
@@ -153,6 +156,15 @@ class Resource
     #[Groups([self::GET_FULL, self::WRITE])]
     private ?MediaObject $previewImage = null;
 
+    /**
+     * Acteur auquel la ressource est rattachée (nullable : les ressources existantes n'en ont pas).
+     * Le point focal et les administrateurs de page de cet acteur peuvent la gérer.
+     */
+    #[ORM\ManyToOne(targetEntity: Actor::class)]
+    #[ORM\JoinColumn(name: 'actor_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    #[Groups([self::GET_FULL, self::WRITE])]
+    private ?Actor $actor = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups([self::GET_FULL, self::WRITE])]
     private ?string $otherType = null;
@@ -203,6 +215,18 @@ class Resource
     public function setDescription(string $description): static
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function getActor(): ?Actor
+    {
+        return $this->actor;
+    }
+
+    public function setActor(?Actor $actor): static
+    {
+        $this->actor = $actor;
 
         return $this;
     }

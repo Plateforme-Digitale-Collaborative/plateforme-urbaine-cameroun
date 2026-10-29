@@ -3,6 +3,8 @@
         "services": "services",
         "projects": "projets",
         "actors": "acteurs",
+        "actorManagement": "gestion",
+        "myActors": "mes-acteurs",
         "resources": "ressources",
         "map": "ma-carte",
         "myAccount": "mon-compte",

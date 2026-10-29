@@ -60,6 +60,24 @@
         </div>
 
         <div class="Form__fieldCtn">
+          <label class="Form__label">{{ $t('resources.form.fields.actor.label') }}</label>
+          <v-select
+            density="compact"
+            variant="outlined"
+            :disabled="actorLocked"
+            v-model="form.actor.value.value as Actor"
+            :items="actors"
+            item-title="name"
+            item-value="@id"
+            :placeholder="$t('resources.form.fields.actor.placeholder')"
+            :error-messages="form.actor.errorMessage.value"
+            @update:model-value="form.actor.handleChange(form.actor.value.value)"
+            :clearable="!actorLocked"
+            return-object
+          />
+        </div>
+
+        <div class="Form__fieldCtn">
           <label class="Form__label required">{{ $t('resources.form.fields.name.label') }}</label>
           <v-text-field
             density="compact"
@@ -287,10 +305,12 @@ import FormSectionTitle from '@/components/text-elements/FormSectionTitle.vue'
 import { AdministrativeScope } from '@/models/enums/AdministrativeScope'
 import { FormType } from '@/models/enums/app/FormType'
 import { NotificationType } from '@/models/enums/app/NotificationType'
+import { UserRoles } from '@/models/enums/auth/UserRoles'
 import { ODD } from '@/models/enums/contents/ODD'
 import { ResourceFormat } from '@/models/enums/contents/ResourceFormat'
 import { ResourceType } from '@/models/enums/contents/ResourceType'
 import { Thematic } from '@/models/enums/contents/Thematic'
+import type { Actor } from '@/models/interfaces/Actor'
 import type { Admin1Boundary, Admin3Boundary } from '@/models/interfaces/AdminBoundaries'
 import type { ContentImageFromUserFile } from '@/models/interfaces/ContentImage'
 import type { FileObject } from '@/models/interfaces/object/FileObject'
@@ -300,6 +320,8 @@ import { nestedObjectsToIri } from '@/services/api/ApiPlatformService'
 import { onInvalidSubmit } from '@/services/forms/FormService'
 import { addNotification } from '@/services/notifications/NotificationService'
 import { ResourceFormService } from '@/services/resources/ResourceFormService'
+import { useActorsStore } from '@/stores/actorsStore'
+import { useActorTeamStore } from '@/stores/actorTeamStore'
 import { useAdminBoundariesStore } from '@/stores/adminBoundariesStore'
 import { useResourceStore } from '@/stores/resourceStore'
 import { useUserStore } from '@/stores/userStore'
@@ -309,6 +331,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const resourceStore = useResourceStore()
+const actorsStore = useActorsStore()
+const teamStore = useActorTeamStore()
 const userStore = useUserStore()
 const adminBoundariesStore = useAdminBoundariesStore()
 
@@ -320,8 +344,37 @@ const props = defineProps<{
   isShown: boolean
 }>()
 
+// Éditeurs et admins : tous les acteurs. Point focal / administrateur de page sans rôle d'éditeur :
+// uniquement les acteurs dont ils gèrent la page (le serveur refuse les autres).
+const actors = computed(() =>
+  userStore.userIsAdmin() || userStore.userHasRole(UserRoles.EDITOR_RESSOURCES)
+    ? actorsStore.actorsList
+    : actorsStore.actorsList.filter((actor) => userStore.userManagesActor(actor))
+)
+
+// Formulaire ouvert depuis la page d'un acteur : l'acteur de rattachement est imposé (grisé).
+const presetLocked = ref(false)
+// Verrouillé aussi en modification pour qui n'est ni admin ni éditeur (point focal / admin de page).
+const actorLocked = computed(
+  () =>
+    presetLocked.value ||
+    !(userStore.userIsAdmin() || userStore.userHasRole(UserRoles.EDITOR_RESSOURCES))
+)
+
 onMounted(async () => {
-  await Promise.all([adminBoundariesStore.getAdmin1(), adminBoundariesStore.getAdmin3()])
+  await Promise.all([
+    actorsStore.getAll(),
+    adminBoundariesStore.getAdmin1(),
+    adminBoundariesStore.getAdmin3()
+  ])
+  // Formulaire ouvert depuis la page d'un acteur : on pré-sélectionne cet acteur.
+  if (!props.resource && teamStore.presetActorId) {
+    const preset = actors.value.find((actor) => actor.id === teamStore.presetActorId)
+    if (preset) {
+      form.actor.value.value = preset
+      presetLocked.value = true
+    }
+  }
   existingImagePreview.value = props.resource?.previewImage ? [props.resource.previewImage] : []
 })
 

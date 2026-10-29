@@ -35,8 +35,10 @@
 
     <v-list class="mt-2">
       <v-list-item
-        v-if="userStore.userHasRole(UserRoles.EDITOR_PROJECTS) || userStore.userIsAdmin()"
-        @click="projectStore.isProjectFormShown = true"
+        v-if="
+          userStore.userHasRole(UserRoles.EDITOR_PROJECTS) || userStore.userIsAdmin()
+        "
+        @click="openProjectForm"
       >
         <template v-slot:prepend>
           <v-icon color="main-blue" icon="$plus"></v-icon>
@@ -53,8 +55,10 @@
         <v-list-item-title>{{ $t('header.addActor') }}</v-list-item-title>
       </v-list-item>
       <v-list-item
-        v-if="userStore.userHasRole(UserRoles.EDITOR_RESSOURCES) || userStore.userIsAdmin()"
-        @click="resourceStore.isResourceFormShown = true"
+        v-if="
+          userStore.userHasRole(UserRoles.EDITOR_RESSOURCES) || userStore.userIsAdmin()
+        "
+        @click="openResourceForm"
       >
         <template v-slot:prepend>
           <v-icon color="main-blue" icon="$plus"></v-icon>
@@ -75,6 +79,12 @@
         <v-list-item-title color="main-blue" class="text-weight-bold">{{
           $t('header.account')
         }}</v-list-item-title>
+      </v-list-item>
+      <v-list-item v-if="userStore.userHasManagedActors" :to="{ name: 'myActors' }">
+        <template v-slot:prepend>
+          <v-icon color="main-blue" icon="$accountGroupOutline"></v-icon>
+        </template>
+        <v-list-item-title>{{ $t('actorTeam.myActors.menu') }}</v-list-item-title>
       </v-list-item>
       <v-list-item :to="{ name: 'myDiverCityBookings' }">
         <template v-slot:prepend>
@@ -104,6 +114,7 @@
 import { DialogKey } from '@/models/enums/app/DialogKey'
 import { UserRoles } from '@/models/enums/auth/UserRoles'
 import { useActorsStore } from '@/stores/actorsStore'
+import { useActorTeamStore } from '@/stores/actorTeamStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { useResourceStore } from '@/stores/resourceStore'
 import { useUserStore } from '@/stores/userStore'
@@ -116,6 +127,18 @@ const userStore = useUserStore()
 const actorsStore = useActorsStore()
 const projectStore = useProjectStore()
 const resourceStore = useResourceStore()
+const teamStore = useActorTeamStore()
+
+// Depuis le menu, aucun acteur n'est pré-sélectionné (contrairement au bouton de la page d'un acteur).
+function openProjectForm() {
+  teamStore.presetActorId = null
+  projectStore.isProjectFormShown = true
+}
+
+function openResourceForm() {
+  teamStore.presetActorId = null
+  resourceStore.isResourceFormShown = true
+}
 </script>
 
 <style lang="scss">

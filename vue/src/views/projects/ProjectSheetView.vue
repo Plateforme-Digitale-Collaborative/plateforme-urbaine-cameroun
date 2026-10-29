@@ -335,7 +335,9 @@ const isEditable = computed(() => {
   return (
     userStore.userIsAdmin() ||
     (projectStore.project?.createdBy?.id === userStore.currentUser?.id &&
-      userStore.currentUser?.id != null)
+      userStore.currentUser?.id != null) ||
+    // point focal / administrateur de page de l'acteur auquel le projet est rattaché
+    userStore.userManagesActor(projectStore.project?.actor)
   )
 })
 

@@ -1,5 +1,6 @@
 import { DialogKey } from '@/models/enums/app/DialogKey'
 import { StoresList } from '@/models/enums/app/StoresList'
+import { ActorAssignmentRole } from '@/models/enums/actors/ActorTeam'
 import { UserRoles } from '@/models/enums/auth/UserRoles'
 import type {
   EmailVerifierValues,
@@ -7,6 +8,7 @@ import type {
   SignUpValues
 } from '@/models/interfaces/auth/AuthenticationsValues'
 import type { User, UserSubmission } from '@/models/interfaces/auth/User'
+import type { ManagedActor } from '@/models/interfaces/ActorTeam'
 import type { FileObject } from '@/models/interfaces/object/FileObject'
 import FileUploader from '@/services/files/FileUploader'
 import { AuthenticationService } from '@/services/userAndAuth/AuthenticationService'
@@ -18,6 +20,9 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApplicationStore } from './applicationStore'
+
+/** Un acteur, sa référence API ou son IRI. */
+type ActorRef = string | { id?: string; '@id'?: string } | null | undefined
 
 export const useUserStore = defineStore(StoresList.USER, () => {
   const router = useRouter()
@@ -41,6 +46,31 @@ export const useUserStore = defineStore(StoresList.USER, () => {
         userHasRole(UserRoles.EDITOR_DATA))
     )
   }
+
+  // --- Pages d'acteurs : point focal / administrateur de page ---
+  const managedActors = computed<ManagedActor[]>(() => currentUser.value?.managedActors ?? [])
+  const userHasManagedActors = computed(() => managedActors.value.length > 0)
+  /** Accepte un acteur complet ({ id }), une référence API ({ '@id': '/api/actors/{id}' }) ou un IRI. */
+  const actorIdOf = (actor?: ActorRef): string | undefined =>
+    typeof actor === 'string' ? actor.split('/').pop() : (actor?.id ?? actor?.['@id']?.split('/').pop())
+  /** Rôle de l'utilisateur sur cet acteur, ou null s'il n'en est ni point focal ni administrateur de page. */
+  const userActorRole = (
+    actor?: ActorRef
+  ): ActorAssignmentRole | null => {
+    const id = actorIdOf(actor)
+    if (!id || !userIsLogged.value) return null
+    return managedActors.value.find((managed) => managed.actorId === id)?.role ?? null
+  }
+  const userIsFocalPointOf = (actor?: ActorRef) =>
+    userActorRole(actor) === ActorAssignmentRole.FOCAL_POINT
+  const userIsPageAdminOf = (actor?: ActorRef) =>
+    userActorRole(actor) === ActorAssignmentRole.PAGE_ADMIN
+  /** Peut agir sur la page de cet acteur (les modifications d'un administrateur de page passent par validation). */
+  const userManagesActor = (actor?: ActorRef) =>
+    userActorRole(actor) !== null
+  /** Peut valider les modifications / nommer les administrateurs de page de cet acteur. */
+  const userCanValidateFor = (actor?: ActorRef) =>
+    userIsAdmin() || userIsFocalPointOf(actor)
 
   const signIn = async (values: SignInValues, hideDialog = true) => {
     errorWhileSignInOrSignUp.value = false
@@ -92,6 +122,13 @@ export const useUserStore = defineStore(StoresList.USER, () => {
 
   const getAuthenticatedUser = async () => {
     currentUser.value = (await AuthenticationService.getAuthenticatedUser()).data
+  }
+
+  /** Recharge le profil (rôles, acteurs gérés...) sans passer par une reconnexion. */
+  const refreshCurrentUser = async () => {
+    if (userIsLogged.value) {
+      await getAuthenticatedUser()
+    }
   }
 
   const signUp = async (values: SignUpValues) => {
@@ -160,6 +197,14 @@ export const useUserStore = defineStore(StoresList.USER, () => {
     userHasRole,
     userIsActorEditor,
     userIsDiverCitySpaceAdmin,
+    managedActors,
+    userHasManagedActors,
+    userActorRole,
+    userIsFocalPointOf,
+    userIsPageAdminOf,
+    userManagesActor,
+    userCanValidateFor,
+    refreshCurrentUser,
     currentUser,
     errorWhileSignInOrSignUp,
     invalidAccount,

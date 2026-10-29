@@ -5,7 +5,12 @@ import router from '@/router'
 import { addNotification } from '@/services/notifications/NotificationService'
 import { AuthenticationService } from '@/services/userAndAuth/AuthenticationService'
 import * as Sentry from '@sentry/vue'
-import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse
+} from 'axios'
 
 let isRefreshing = false
 let refreshSubscribers: Array<(error: any) => void> = []
@@ -28,8 +33,24 @@ const axiosInstance = axios.create({
   baseURL: 'https://' + window.location.hostname
 })
 
+// Une modification d'administrateur de page n'est pas appliquée tout de suite : le serveur la met en
+// attente de validation du point focal et l'indique par l'en-tête X-Change-Pending.
+// (Ajouter 'X-Change-Pending' aux en-têtes exposés du CORS si le front est servi depuis une autre origine.)
+let lastPendingNotification = 0
+const notifyIfChangePending = (response: AxiosResponse) => {
+  if (!response.headers?.['x-change-pending']) return
+  const now = Date.now()
+  // Une sauvegarde peut enchaîner plusieurs requêtes (ex. images) : une seule notification.
+  if (now - lastPendingNotification < 5000) return
+  lastPendingNotification = now
+  addNotification(i18n.t('actorTeam.changePending'), NotificationType.INFO)
+}
+
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    notifyIfChangePending(response)
+    return response
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
     const requestUrl = originalRequest?.url

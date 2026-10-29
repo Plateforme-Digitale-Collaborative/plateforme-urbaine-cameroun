@@ -102,7 +102,9 @@ const isEditable = computed(() => {
   return (
     userStore.userIsAdmin() ||
     (props.resource?.createdBy?.id === userStore.currentUser?.id &&
-      userStore.currentUser?.id != null)
+      userStore.currentUser?.id != null) ||
+    // point focal / administrateur de page de l'acteur auquel la ressource est rattachée
+    (typeof props.resource?.actor === 'object' && userStore.userManagesActor(props.resource.actor))
   )
 })
 const locationName = computed(() =>

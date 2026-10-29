@@ -1,6 +1,7 @@
 import { createI18n } from 'vue-i18n'
 import commonFR from '@/assets/translations/fr/common.json'
 import actorsFR from '@/assets/translations/fr/actors.json'
+import actorTeamFR from '@/assets/translations/fr/actorTeam.json'
 import adminFR from '@/assets/translations/fr/admin.json'
 import authFR from '@/assets/translations/fr/auth.json'
 import projectsFR from '@/assets/translations/fr/projects.json'
@@ -20,6 +21,7 @@ export const i18nInstance = createI18n({
     fr: {
       ...commonFR,
       ...actorsFR,
+      ...actorTeamFR,
       ...adminFR,
       ...authFR,
       ...projectsFR,

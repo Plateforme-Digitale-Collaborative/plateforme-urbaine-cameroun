@@ -31,6 +31,7 @@ use App\Enum\Status;
 use App\Enum\TechnicalMaturity;
 use App\Model\Enums\UserRoles;
 use App\Repository\ProjectRepository;
+use App\Security\Voter\ActorContentVoter;
 use App\Services\State\Processor\ProjectProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -66,12 +67,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 #[ApiResource(
     operations: [
+        // Éditeur de projets, OU point focal / administrateur de page de l'acteur auquel le projet est rattaché.
+        // (securityPostDenormalize : l'acteur du projet n'est connu qu'une fois le corps de requête désérialisé)
         new Post(
-            security: "is_granted('".UserRoles::ROLE_EDITOR_PROJECTS."')",
+            securityPostDenormalize: "is_granted('".UserRoles::ROLE_EDITOR_PROJECTS."') or is_granted('".ActorContentVoter::EDIT."', object)",
             processor: ProjectProcessor::class
         ),
         new Patch(
-            security: "is_granted('ROLE_ADMIN') or (is_granted('".UserRoles::ROLE_EDITOR_PROJECTS."') and object.getCreatedBy() == user)",
+            security: "is_granted('ROLE_ADMIN') or (is_granted('".UserRoles::ROLE_EDITOR_PROJECTS."') and object.getCreatedBy() == user) or is_granted('".ActorContentVoter::EDIT."', object)",
             processor: ProjectProcessor::class
         ),
         new Delete(

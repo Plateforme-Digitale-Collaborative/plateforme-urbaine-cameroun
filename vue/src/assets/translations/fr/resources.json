@@ -37,6 +37,10 @@
         "validate": "Valider une ressource"
       },
       "fields": {
+        "actor": {
+          "label": "Acteur de rattachement",
+          "placeholder": "Acteur auquel rattacher la ressource (facultatif)"
+        },
         "name": {
           "label": "Nom de la ressource",
           "placeholder": "Nom de la ressource"

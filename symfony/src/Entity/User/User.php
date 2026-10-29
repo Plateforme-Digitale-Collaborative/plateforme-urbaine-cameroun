@@ -12,6 +12,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use App\Entity\Actor;
+use App\Entity\ActorAssignment;
 use App\Entity\AppContentComment;
 use App\Entity\DiverCity\SpaceAdmin;
 use App\Entity\File\FileObject;
@@ -196,8 +197,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: SpaceAdmin::class, mappedBy: 'user')]
     private Collection $spaceAdmins;
 
+    /**
+     * Affectations (en cours et passées) de l'utilisateur aux pages d'acteurs : point focal / administrateur de page.
+     *
+     * @var Collection<int, ActorAssignment>
+     */
+    #[ORM\OneToMany(targetEntity: ActorAssignment::class, mappedBy: 'user')]
+    private Collection $actorAssignments;
+
     public function __construct()
     {
+        $this->actorAssignments = new ArrayCollection();
         $this->actorsCreated = new ArrayCollection();
         $this->setRoles([UserRoles::ROLE_USER]);
         $this->userLikes = new ArrayCollection();
@@ -219,6 +229,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->email = $email;
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, ActorAssignment>
+     */
+    public function getActorAssignments(): Collection
+    {
+        return $this->actorAssignments;
+    }
+
+    /**
+     * Acteurs dont l'utilisateur est point focal ou administrateur de page (affectations en cours),
+     * pour que le front sache quoi afficher (/users/me).
+     *
+     * @return list<array{actorId: string, actorName: ?string, role: string}>
+     */
+    #[Groups([self::GROUP_GETME])]
+    public function getManagedActors(): array
+    {
+        $managed = [];
+        foreach ($this->actorAssignments as $assignment) {
+            if (!$assignment->isActive()) {
+                continue;
+            }
+            $managed[] = [
+                'actorId' => (string) $assignment->getActor()?->getId(),
+                'actorName' => $assignment->getActor()?->getName(),
+                'role' => $assignment->getRole()?->value,
+            ];
+        }
+
+        return $managed;
     }
 
     /**
