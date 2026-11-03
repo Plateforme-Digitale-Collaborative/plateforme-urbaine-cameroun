@@ -1,18 +1,24 @@
 name: Check & fix styling
 on: [push]
+
+permissions:
+  contents: write
+
 jobs:
   php-cs-fixer:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
+
       - name: Run PHP CS Fixer
         uses: docker://oskarstark/php-cs-fixer-ga
         with:
           args: --config=symfony/.php-cs-fixer.dist.php --allow-risky=yes --cache-file=symfony/.php-cs-fixer.cache
+
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Fix styling
