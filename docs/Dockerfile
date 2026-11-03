@@ -1,5 +1,6 @@
 
-FROM node:lts-alpine AS docs_base
+FROM node:24-alpine AS docs_base
+RUN command -v yarn >/dev/null || npm install -g yarn
 
 WORKDIR /app
 COPY package.json yarn.lock ./

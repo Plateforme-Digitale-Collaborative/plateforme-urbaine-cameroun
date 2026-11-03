@@ -1,4 +1,5 @@
-FROM node:lts-alpine AS vue_base
+FROM node:24-alpine AS vue_base
+RUN command -v yarn >/dev/null || npm install -g yarn
 
 WORKDIR /app
 
