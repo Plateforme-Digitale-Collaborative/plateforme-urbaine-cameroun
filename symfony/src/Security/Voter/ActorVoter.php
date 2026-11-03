@@ -4,7 +4,6 @@ namespace App\Security\Voter;
 
 use App\Entity\Actor;
 use App\Entity\User\User;
-use App\Model\Enums\UserRoles;
 use App\Services\Actor\ActorAccessChecker;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;

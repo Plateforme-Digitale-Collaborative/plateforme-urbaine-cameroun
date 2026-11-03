@@ -15,7 +15,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
- * POST /api/actor_assignments  { "actor": "/api/actors/{id}", "targetUserId": 12 (ou "userEmail": "..."), "role": "focal_point" | "page_admin" }
+ * POST /api/actor_assignments  { "actor": "/api/actors/{id}", "targetUserId": 12 (ou "userEmail": "..."), "role": "focal_point" | "page_admin" }.
  *
  *  - focal_point : réservé aux admins PDC. Remplace le point focal en cours (qui est clôturé, historique conservé).
  *  - page_admin  : admin PDC ou point focal de l'acteur.

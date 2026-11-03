@@ -58,7 +58,7 @@ class ActorChangeWorkflow
     /**
      * Enveloppe le traitement habituel d'un Actor / Project / Resource (POST, PATCH, PUT).
      *
-     * @param Actor|Project|Resource $data
+     * @param Actor|Project|resource $data
      * @param callable():mixed       $normalPath traitement habituel (validation, géodonnées, persistance)
      */
     public function handle(object $data, Operation $operation, array $context, callable $normalPath): mixed

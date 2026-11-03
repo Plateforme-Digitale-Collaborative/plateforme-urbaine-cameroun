@@ -14,7 +14,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * GET /api/actor_assignable_users?actor={uuid}&q={texte}
+ * GET /api/actor_assignable_users?actor={uuid}&q={texte}.
  *
  * Recherche par nom (prénom / nom) des utilisateurs validés pouvant être affectés à la page d'un acteur.
  * Réservé aux admins PDC et au point focal de l'acteur. Les utilisateurs déjà affectés (en cours) sont exclus.

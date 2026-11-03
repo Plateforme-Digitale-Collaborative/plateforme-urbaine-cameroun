@@ -13,7 +13,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
- * PATCH /api/actor_change_requests/{id}/review  { "status": "approved" | "rejected", "reviewComment": "..." }
+ * PATCH /api/actor_change_requests/{id}/review  { "status": "approved" | "rejected", "reviewComment": "..." }.
  *
  * Décision du point focal (ou d'un admin PDC) sur une demande en attente. Le refus exige un motif.
  */
